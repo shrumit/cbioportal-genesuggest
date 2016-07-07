@@ -47,6 +47,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.mskcc.cbio.portal.model.CanonicalGene;
 import org.mskcc.cbio.portal.util.ProgressMonitor;
+import org.mskcc.cbio.portal.util.StringUtilsLevenshtein;
 
 /**
  * A Utility Class that speeds access to Gene Info.
@@ -101,8 +102,8 @@ public class DaoGeneOptimized {
                     if (gene!=null) {
                         cbioCancerGenes.add(gene);
                     } else {
-                    	ProgressMonitor.logWarning(line+" in the cbio cancer gene list config file [resources" + CBIO_CANCER_GENES_FILE + 
-                        		"] is not a HUGO gene symbol. You should either update this file or update the `gene` and `gene_alias` tables to fix this.");
+                        ProgressMonitor.logWarning(line+" in the cbio cancer gene list config file [resources" + CBIO_CANCER_GENES_FILE + 
+                                "] is not a HUGO gene symbol. You should either update this file or update the `gene` and `gene_alias` tables to fix this.");
                     }
                 }
                 in.close();
@@ -118,8 +119,8 @@ public class DaoGeneOptimized {
                     String[] parts = line.trim().split("\t",-1);
                     CanonicalGene gene = getGene(Long.parseLong(parts[1]));
                     if (gene==null) {
-                    	ProgressMonitor.logWarning(line+" in config file [resources" + GENE_SYMBOL_DISAMBIGUATION_FILE + 
-                        		"]is not valid. You should either update this file or update the `gene` and `gene_alias` tables to fix this.");
+                        ProgressMonitor.logWarning(line+" in config file [resources" + GENE_SYMBOL_DISAMBIGUATION_FILE + 
+                                "]is not valid. You should either update this file or update the `gene` and `gene_alias` tables to fix this.");
                     }
                     disambiguousGenes.put(parts[0], gene);
                 }
@@ -242,16 +243,16 @@ public class DaoGeneOptimized {
      * @return
      */
     public List<CanonicalGene> getGene(String geneSymbol, boolean searchInAliases) {
-    	CanonicalGene gene = getGene(geneSymbol);
-    	if (gene!=null) {
+        CanonicalGene gene = getGene(geneSymbol);
+        if (gene!=null) {
             return Collections.singletonList(gene);
         }
         
-    	if (searchInAliases) {
-	        List<CanonicalGene> genes = geneAliasMap.get(geneSymbol.toUpperCase());
-	        if (genes!=null) {
-	        	return Collections.unmodifiableList(genes);
-	        }
+        if (searchInAliases) {
+            List<CanonicalGene> genes = geneAliasMap.get(geneSymbol.toUpperCase());
+            if (genes!=null) {
+                return Collections.unmodifiableList(genes);
+            }
         }
         
         return Collections.emptyList();
@@ -450,4 +451,23 @@ public class DaoGeneOptimized {
     public void deleteAllRecords() throws DaoException {
         DaoGene.deleteAllRecords();
     }
+    
+    public String suggestGene(String geneId) {
+        if (geneId.length() < 2)
+            return "";
+    
+        int min = 100;
+        String best = "";
+        geneId = geneId.toUpperCase();
+        for (String key : geneSymbolMap.keySet()){
+            int score = StringUtilsLevenshtein.getLevenshteinDistance(key, geneId);
+            if (score < min){
+                min = score;
+                best = key;
+            }
+        }
+        return best;
+    }
+
+    
 }

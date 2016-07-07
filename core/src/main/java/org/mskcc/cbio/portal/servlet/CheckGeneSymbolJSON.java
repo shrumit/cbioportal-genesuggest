@@ -99,11 +99,18 @@ public class CheckGeneSymbolJSON extends HttpServlet {
         for(String symbol: geneList) {
             Map map = new HashMap();
             JSONArray symbols = new JSONArray();
+            String suggestion = "";
             for(CanonicalGene gene: daoGene.guessGene(symbol)) {
                 symbols.add(gene.getStandardSymbol());
             }
+            
             map.put("symbols", symbols);
             map.put("name", symbol);
+            
+            if (symbols.isEmpty()){
+                suggestion = daoGene.suggestGene(symbol);
+                map.put("suggestion", suggestion);
+            }
 
             geneArray.add(map);
         }
